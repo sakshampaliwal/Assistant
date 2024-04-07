@@ -1,0 +1,23 @@
+# This is a sample requirements.txt file for installing Wikipedia, SpeechRecognition, and pyttsx3
+# Before creating environment you need to ensure that Execution policy is not restricted for that you can check by this command: Get-ExecutionPolicy.
+# If restricted then Open terminal as admin and run this command: set-executionpolicy remotesigned
+# to create env then use this command: python -m venv myenv
+# after that use this to activate: myenv\Scripts\activate
+# to deactivate use this: deactivate
+# to install these use this command: pip install -r requirements.txt
+
+
+# Required packages without version constraints
+wikipedia
+SpeechRecognition
+pyttsx3
+PyAudio
+openai
+bs4
+google
+newsapi-python
+pyttsx3
+PyDictionary
+SpeechRecognition
+
+# pip install -r requirements.txt
