@@ -19,5 +19,6 @@ newsapi-python
 pyttsx3
 PyDictionary
 SpeechRecognition
-
+opencv-python-headless
+subprocess.run
 # pip install -r requirements.txt

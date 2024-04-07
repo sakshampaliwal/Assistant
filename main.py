@@ -6,14 +6,36 @@ import wikipedia
 import webbrowser
 import os
 import smtplib
-from bs4 import BeautifulSoup
+import pyaudio
 import requests
+import subprocess
+import cv2
+import ctypes
+from bs4 import BeautifulSoup
 from googlesearch import search
 from PyDictionary import PyDictionary
 
 engine = pyttsx3.init("sapi5")
 voices = engine.getProperty("voices")
 engine.setProperty("voice", voices[0].id)
+
+
+def set_brightness(brightness):
+    # Convert brightness value (0-100) to the range (0-255)
+    brightness_value = int(brightness * 255 / 100)
+
+    # Call the SetDeviceGammaRamp function from the Windows API
+    ctypes.windll.user32.SetDeviceGammaRamp(0, ctypes.c_void_p(brightness_value), 0)
+
+
+def start_emotion_detection():
+    # Replace 'python emotion_detection_project.py' with the command to start your emotion detection project
+    subprocess.Popen(["python", "emotion_detection_project.py"])
+
+
+def stop_emotion_detection():
+    # Terminate the process associated with the emotion detection project
+    subprocess.run(["pkill", "-f", "emotion_detection_project.py"])
 
 
 def speak(audio):
@@ -51,6 +73,35 @@ def takeCommand():
     return query.lower()
 
 
+def capture_photo():
+    # Open the default camera (index 0)
+    cap = cv2.VideoCapture(0)
+
+    # Check if the camera opened successfully
+    if not cap.isOpened():
+        speak("Error: Unable to open camera.")
+        return
+
+    speak("Smile! Capturing photo...")
+
+    # Capture a single frame from the camera
+    ret, frame = cap.read()
+
+    # Check if the frame was captured successfully
+    if not ret:
+        speak("Error: Unable to capture photo.")
+        return
+
+    # Save the captured frame as a JPEG image
+    filename = "captured_photo.jpg"
+    cv2.imwrite(filename, frame)
+
+    speak("Photo captured successfully!")
+
+    # Release the camera
+    cap.release()
+
+
 def sendEmail(to, content):
     server = smtplib.SMTP("smtp.gmail.com", 587)
     server.ehlo()
@@ -86,20 +137,6 @@ def search_website(query):
     except Exception as e:
         print("Error:", e)
 
-
-def get_weather():
-    try:
-        city = "YourCity"  # Change this to your desired city
-        url = f"https://www.google.com/search?q=weather+in+{city}"
-        response = requests.get(url)
-        soup = BeautifulSoup(response.text, "html.parser")
-        temperature = soup.find("div", class_="BNeawe").text
-        speak(f"The current temperature in {city} is {temperature}")
-    except Exception as e:
-        print("Error:", e)
-        speak("Sorry, I couldn't fetch the weather information.")
-
-
 def remind_user():
     speak("What would you like me to remind you?")
     reminder = takeCommand()
@@ -134,7 +171,35 @@ def set_volume(volume_level):
 def set_alarm():
     speak("What time should I set the alarm for?")
     alarm_time = takeCommand()
-    # Implement alarm setting logic here
+
+    # Parse the user-provided time
+    alarm_time = alarm_time.lower()
+    if "hour" in alarm_time and "minute" in alarm_time:
+        try:
+            hour = int(alarm_time.split("hour")[1].split("minute")[0].strip())
+            minute = int(alarm_time.split("minute")[1].strip())
+            alarm_time = datetime.time(hour=hour, minute=minute)
+            print(alarm_time)
+            current_time = datetime.datetime.now().time()
+
+            # Calculate the time difference
+            delta_hours = alarm_time.hour - current_time.hour
+            delta_minutes = alarm_time.minute - current_time.minute
+            delta_seconds = (delta_hours * 3600) + (delta_minutes * 60)
+
+            if delta_seconds > 0:
+                speak(f"Alarm set for {alarm_time.strftime('%I:%M %p')}")
+                # Wait until the alarm time
+                time.sleep(delta_seconds)
+                # Trigger the alarm
+                speak("Alarm!")
+            else:
+                speak("Please provide a valid time in the future.")
+        except Exception as e:
+            print("Error:", e)
+            speak("Sorry, I couldn't set the alarm.")
+    else:
+        speak("Please provide a valid time including hour and minute.")
 
 
 def get_word_meaning(word):
@@ -180,6 +245,9 @@ if __name__ == "__main__":
             speak("According to Wikipedia")
             print(results)
             speak(results)
+        elif "capture photo" in query:
+            capture_photo()
+
         elif "open youtube" in query:
             webbrowser.open("youtube.com")
 
@@ -242,7 +310,7 @@ if __name__ == "__main__":
             except Exception as e:
                 print(e)
                 speak("Sorry my friend Saksham Bro. I am not able to send this email")
-        
+
         elif "epoxy" in query:
             query = query.replace("chatgpt", "")
             try:
@@ -256,37 +324,37 @@ if __name__ == "__main__":
             except Exception as e:
                 print("Error:", e)
                 speak("Sorry, I encountered an error while processing your request.")
-        
+
         elif "search" in query:
             search_query = query.replace("search", "")
             speak(f"Searching the web for {search_query}")
             search_web(search_query)
-        
+
         elif "weather" in query:
             get_weather()
-        
+
         elif "reminder" in query:
             remind_user()
-        
+
         elif "joke" in query:
             tell_joke()
-        
+
         elif "volume" in query:
             query_split = query.split()
             volume_level = query_split[query_split.index("volume") + 1]
             set_volume(volume_level)
-        
+
         elif "set alarm" in query:
             set_alarm()
-        
+
         elif "meaning" in query:
             word = query.split("meaning")[1].strip()
             get_word_meaning(word)
-        
+
         elif "synonyms" in query:
             word = query.split("synonyms")[1].strip()
             get_word_synonyms(word)
-        
+
         elif "antonyms" in query:
             word = query.split("antonyms")[1].strip()
             get_word_antonyms(word)
@@ -294,3 +362,14 @@ if __name__ == "__main__":
         elif "pronounce" in query:
             word = query.split("pronounce")[1].strip()
             pronounce_word(word)
+
+        elif "set brightness to" in query:
+            try:
+                brightness_level = int(query.split("to")[1].strip())
+                if 0 <= brightness_level <= 100:
+                    set_brightness(brightness_level)
+                    speak(f"Brightness set to {brightness_level} percent.")
+                else:
+                    speak("Please provide a brightness level between 0 and 100.")
+            except ValueError:
+                speak("Please provide a valid brightness level.")
